@@ -124,7 +124,8 @@
     let hasTarget = false;
     let fish = null;
     let prey = null;
-    let caught = false;
+    let heartUntil = 0;
+    let heartTimer;
 
     function spawnFish() {
       const button = document.createElement("button");
@@ -173,7 +174,7 @@
       cat.style.transform = `translate(${Math.round(x - 24)}px, ${Math.round(y - 40 - lift)}px)`;
       cat.classList.toggle("below", y < 75);
       bubble.hidden = moving || !hasTarget;
-      bubble.textContent = caught ? "♥" : "meow";
+      bubble.textContent = performance.now() < heartUntil ? "♥" : "meow";
     }
 
     function aim(clientX, clientY) {
@@ -190,7 +191,7 @@
       const distance = Math.hypot(dx, dy);
       if (Math.abs(dx) > 1) facing = Math.sign(dx);
 
-      const step = reducedMotion.matches ? distance : elapsed * (0.19 + 0.30 * Math.sin(phase * Math.PI));
+      const step = reducedMotion.matches ? distance : elapsed * (0.09 + 0.15 * Math.sin(phase * Math.PI));
       if (distance <= Math.max(step, 1)) {
         x = targetX;
         y = targetY;
@@ -198,7 +199,11 @@
           fish.remove();
           fish = null;
           prey = null;
-          caught = true;
+          heartUntil = performance.now() + 1000;
+          clearTimeout(heartTimer);
+          heartTimer = setTimeout(() => {
+            if (!frame) draw(false);
+          }, 1000);
           setTimeout(spawnFish, 1800 + Math.random() * 2200);
         }
         frame = 0;
@@ -217,15 +222,14 @@
 
     function setTarget(clientX, clientY) {
       hasTarget = true;
-      caught = false;
       aim(clientX, clientY);
       if (Math.hypot(targetX - x, targetY - y) > 1) bubble.hidden = true;
       if (!frame) frame = requestAnimationFrame(tick);
     }
 
     function chase(event) {
-      if (event.target === fish) return;
-      prey = null;
+      if (prey || event.target === fish) return;
+      if (performance.now() < heartUntil) return;
       setTarget(event.clientX, event.clientY);
     }
 
