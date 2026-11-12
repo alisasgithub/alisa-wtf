@@ -1,0 +1,76 @@
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  background: #f7f3e8;
+  color: #30283b;
+  font-family: "Press Start 2P", monospace;
+  overflow: hidden;
+}
+h1 {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  font-weight: normal;
+}
+#cat {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+canvas { display: block; width: 48px; height: 40px; image-rendering: pixelated; }
+#meow {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 2px solid #30283b;
+  background: #fffaf1;
+  font-size: 8px;
+}
+#meow.heart { font-size: 0; }
+#meow.heart::before {
+  content: "";
+  display: block;
+  width: 22px;
+  height: 18px;
+  background: #ef5b96;
+  clip-path: polygon(0 22%, 9% 22%, 9% 11%, 18% 11%, 18% 0,
+    36% 0, 36% 11%, 45% 11%, 45% 22%, 55% 22%, 55% 11%,
+    64% 11%, 64% 0, 82% 0, 82% 11%, 91% 11%, 91% 22%,
+    100% 22%, 100% 56%, 91% 56%, 91% 67%, 82% 67%, 82% 78%,
+    73% 78%, 73% 89%, 64% 89%, 64% 100%, 36% 100%, 36% 89%,
+    27% 89%, 27% 78%, 18% 78%, 18% 67%, 9% 67%, 9% 56%, 0 56%);
+}
+#meow::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 45%;
+  border: 4px solid transparent;
+  border-top-color: #30283b;
+}
+.fish {
+  position: fixed;
+  width: 34px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.fish canvas { width: 24px; height: 16px; pointer-events: none; }
+#cat { z-index: 1; }
+#cat.below #meow { bottom: auto; top: 100%; }
+#cat.below #meow::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: #30283b;
+}
