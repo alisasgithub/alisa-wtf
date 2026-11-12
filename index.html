@@ -18,7 +18,8 @@
     }
     h1 {
       margin: 0;
-      font-size: clamp(1.25rem, 8vw, 4rem);
+      font-size: 0.8rem;
+      text-transform: uppercase;
       font-weight: normal;
     }
     #cat {
@@ -33,7 +34,8 @@
       bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
-      padding: 7px;
+      padding: 8px 10px;
+      border-radius: 999px;
       border: 2px solid #30283b;
       background: #fffaf1;
       font-size: 8px;
@@ -46,6 +48,19 @@
       border: 4px solid transparent;
       border-top-color: #30283b;
     }
+    .fish {
+      position: fixed;
+      width: 34px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      transform: translate(-50%, -50%);
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+    .fish canvas { width: 24px; height: 16px; pointer-events: none; }
+    #cat { z-index: 1; }
     #cat.below #meow { bottom: auto; top: 100%; }
     #cat.below #meow::after {
       top: auto;
@@ -67,31 +82,31 @@
     const canvas = cat.querySelector("canvas");
     const pixels = canvas.getContext("2d");
     const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-    const colors = { x: "#30283b", o: "#786187", p: "#edabc0" };
+    const colors = { x: "#522b26", o: "#f49a41", p: "#ffe0a9", t: "#b9572e" };
     const head = [
       "..........xx.....xx.....",
       "..........xox...xox.....",
       "..........xoox.xoox.....",
-      "..........xooooooox.....",
-      ".........xooooooooox....",
-      ".........xooxoooxoox....",
+      "..........xoototoox.....",
+      ".........xootopotoox....",
+      ".........xtooxoxootx....",
       ".........xooopppooox...."
     ];
     const sitting = [
       ".........xxooopooxx.....",
       "........xoooooooox......",
-      ".......xooooooooox......",
-      "..xx...xooooooooox......",
-      ".xoox..xooooooooox......",
+      ".......xootopotoox......",
+      "..xx...xootopotoox......",
+      ".xoox..xootopotoox......",
       "..xooxxooooooooooox.....",
-      "...xxooooooooooooox.....",
+      "...xxooottoooooooox.....",
       ".....xxxxxxxxxxxxxx....."
     ];
     const hopping = [
       "....xx...xxooopooxx.....",
       "...xooxxxoooooooox......",
-      ".xxoooooooooooooox......",
-      "...xooooooooooooox......",
+      ".xxoooottoooooooox......",
+      "...xooottoooooooox......",
       "....xxxxxxxxxxxxxx......",
       "......xoox....xoox......",
       ".......xx......xx.......",
@@ -107,6 +122,42 @@
     let previousTime;
     let phase = 0;
     let hasTarget = false;
+    let fish = null;
+    let prey = null;
+    let caught = false;
+
+    function spawnFish() {
+      const button = document.createElement("button");
+      button.className = "fish";
+      button.type = "button";
+      button.setAttribute("aria-label", "Fish");
+      const sprite = document.createElement("canvas");
+      sprite.width = 12;
+      sprite.height = 8;
+      const brush = sprite.getContext("2d");
+      const rows = [".....ssss...", "....sbbbbss.", "s..sbbbbkbs.", "ssssbbbbbbbs", "ssssbbbbbbbs", "s..sbbbbbs..", "....sssss...", "............"];
+      const palette = { s: "#254f59", b: "#72bfc0", k: "#30283b" };
+      rows.forEach((row, y) => [...row].forEach((pixel, x) => {
+        if (!palette[pixel]) return;
+        brush.fillStyle = palette[pixel];
+        brush.fillRect(x, y, 1, 1);
+      }));
+      button.append(sprite);
+      const fishX = innerWidth * (Math.random() < 0.5 ? 0.16 + Math.random() * 0.22 : 0.62 + Math.random() * 0.22);
+      const fishY = innerHeight * (Math.random() < 0.5 ? 0.2 + Math.random() * 0.15 : 0.65 + Math.random() * 0.15);
+      button.style.left = `${fishX}px`;
+      button.style.top = `${fishY}px`;
+      button.addEventListener("pointerenter", () => targetFish(button));
+      button.addEventListener("click", () => targetFish(button));
+      document.body.append(button);
+      fish = button;
+    }
+
+    function targetFish(button) {
+      const bounds = button.getBoundingClientRect();
+      prey = button;
+      setTarget(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 + 12);
+    }
 
     function draw(moving, lift = 0) {
       pixels.clearRect(0, 0, canvas.width, canvas.height);
@@ -117,9 +168,12 @@
           pixels.fillRect(facing > 0 ? column : 23 - column, rowIndex + 5, 1, 1);
         });
       });
+      const stretch = moving ? 1 + Math.sin(phase * 2 * Math.PI) * 0.17 : 1;
+      canvas.style.transform = `rotate(${moving ? -facing * Math.cos(phase * Math.PI) * 14 : 0}deg) scale(${stretch}, ${2 - stretch})`;
       cat.style.transform = `translate(${Math.round(x - 24)}px, ${Math.round(y - 40 - lift)}px)`;
       cat.classList.toggle("below", y < 75);
       bubble.hidden = moving || !hasTarget;
+      bubble.textContent = caught ? "♥" : "meow";
     }
 
     function aim(clientX, clientY) {
@@ -136,10 +190,17 @@
       const distance = Math.hypot(dx, dy);
       if (Math.abs(dx) > 1) facing = Math.sign(dx);
 
-      const step = reducedMotion.matches ? distance : elapsed * 0.29;
+      const step = reducedMotion.matches ? distance : elapsed * (0.19 + 0.30 * Math.sin(phase * Math.PI));
       if (distance <= Math.max(step, 1)) {
         x = targetX;
         y = targetY;
+        if (prey && prey === fish) {
+          fish.remove();
+          fish = null;
+          prey = null;
+          caught = true;
+          setTimeout(spawnFish, 1800 + Math.random() * 2200);
+        }
         frame = 0;
         previousTime = undefined;
         phase = 0;
@@ -149,16 +210,23 @@
 
       x += dx / distance * step;
       y += dy / distance * step;
-      phase = (phase + elapsed / 260) % 1;
-      draw(true, Math.sin(phase * Math.PI) * 17);
+      phase = (phase + elapsed / 290) % 1;
+      draw(true, Math.sin(phase * Math.PI) * 26);
       frame = requestAnimationFrame(tick);
     }
 
-    function chase(event) {
+    function setTarget(clientX, clientY) {
       hasTarget = true;
-      aim(event.clientX, event.clientY);
+      caught = false;
+      aim(clientX, clientY);
       if (Math.hypot(targetX - x, targetY - y) > 1) bubble.hidden = true;
       if (!frame) frame = requestAnimationFrame(tick);
+    }
+
+    function chase(event) {
+      if (event.target === fish) return;
+      prey = null;
+      setTarget(event.clientX, event.clientY);
     }
 
     addEventListener("pointermove", event => {
@@ -166,6 +234,11 @@
     });
     addEventListener("pointerdown", chase);
     addEventListener("resize", () => {
+      if (fish) {
+        fish.remove();
+        prey = null;
+        spawnFish();
+      }
       aim(hasTarget ? targetX : innerWidth / 2, hasTarget ? targetY : innerHeight / 2 + 72);
       x = targetX;
       y = targetY;
@@ -176,6 +249,7 @@
     x = targetX;
     y = targetY;
     draw(false);
+    setTimeout(spawnFish, 1500);
   </script>
 </body>
 </html>
